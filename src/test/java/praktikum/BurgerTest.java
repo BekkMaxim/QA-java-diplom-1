@@ -1,5 +1,6 @@
 package praktikum;
 
+import org.assertj.core.api.SoftAssertions;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -52,29 +53,38 @@ public class BurgerTest {
     @Parameterized.Parameter(5) public float fillingPrice;
 
     @Test
-    public void setBuns_ShouldCorrectlySetBun() {
+    public void setBunsShouldCorrectlySetBun() {
         burger.setBuns(bun);
         assertSame(bun, burger.bun);
     }
 
     @Test
-    public void addIngredient_ShouldAddToIngredientsList() {
+    public void addIngredientShouldIncreaseListSize() {
+        int initialSize = burger.ingredients.size();
         burger.addIngredient(sauceIngredient);
-        assertEquals(1, burger.ingredients.size());
+        assertEquals(initialSize + 1, burger.ingredients.size());
+    }
+
+    @Test
+    public void addIngredientShouldContainAddedElement() {
+        burger.addIngredient(sauceIngredient);
         assertTrue(burger.ingredients.contains(sauceIngredient));
     }
 
     @Test
-    public void removeIngredient_ShouldRemoveFromList() {
+    public void removeIngredientShouldRemoveFromList() {
         burger.addIngredient(sauceIngredient);
         burger.addIngredient(fillingIngredient);
         burger.removeIngredient(0);
-        assertEquals(1, burger.ingredients.size());
-        assertFalse(burger.ingredients.contains(sauceIngredient));
+
+        SoftAssertions softly = new SoftAssertions();
+        softly.assertThat(burger.ingredients).hasSize(1);
+        softly.assertThat(burger.ingredients).doesNotContain(sauceIngredient);
+        softly.assertAll();
     }
 
     @Test
-    public void moveIngredient_ShouldChangePosition() {
+    public void moveIngredientShouldChangePosition() {
         Ingredient thirdIngredient = mock(Ingredient.class);
 
         burger.addIngredient(sauceIngredient);
@@ -86,7 +96,7 @@ public class BurgerTest {
     }
 
     @Test
-    public void getPrice_ShouldCalculateCorrectPrice() {
+    public void getPriceShouldCalculateCorrectPrice() {
         when(bun.getPrice()).thenReturn(bunPrice);
         when(sauceIngredient.getPrice()).thenReturn(saucePrice);
         when(fillingIngredient.getPrice()).thenReturn(fillingPrice);
@@ -100,7 +110,7 @@ public class BurgerTest {
     }
 
     @Test
-    public void getReceipt_ShouldFormatCorrectly() {
+    public void getReceiptShouldFormatCorrectly() {
         // Настройка моков
         when(bun.getName()).thenReturn(bunName);
         when(bun.getPrice()).thenReturn(bunPrice);
@@ -118,25 +128,36 @@ public class BurgerTest {
         burger.addIngredient(sauceIngredient);
         burger.addIngredient(fillingIngredient);
 
-        // Проверка
-        String receipt = burger.getReceipt();
-        assertTrue(receipt.contains(String.format("(==== %s ====)", bunName)));
-        assertTrue(receipt.contains(String.format("= sauce %s =", sauceName)));
-        assertTrue(receipt.contains(String.format("= filling %s =", fillingName)));
-        assertTrue(receipt.contains(String.format("Price: %f", bunPrice * 2 + saucePrice + fillingPrice)));
+        // Ожидаемый результат
+        String expectedReceipt = String.format(
+                "(==== %s ====)%n" +
+                        "= sauce %s =%n" +
+                        "= filling %s =%n" +
+                        "(==== %s ====)%n" +
+                        "%nPrice: %f%n",
+                bunName, sauceName, fillingName, bunName,
+                bunPrice * 2 + saucePrice + fillingPrice
+        );
+
+        // Фактический результат
+        assertEquals(expectedReceipt, burger.getReceipt());
     }
 
     @Test
-    public void getReceipt_WithNoIngredients_ShouldShowOnlyBuns() {
+    public void getReceiptWithNoIngredientsShouldShowOnlyBuns() {
         when(bun.getName()).thenReturn(bunName);
         when(bun.getPrice()).thenReturn(bunPrice);
 
         burger.setBuns(bun);
 
-        String receipt = burger.getReceipt();
-        assertEquals(2, receipt.split(bunName).length - 1); // Должно быть 2 вхождения названия булочки
-        assertTrue(receipt.contains(String.format("Price: %f", bunPrice * 2)));
-        assertFalse(receipt.contains("= sauce "));
-        assertFalse(receipt.contains("= filling "));
+        String expectedReceipt = String.format(
+                "(==== %s ====)%n" +
+                        "(==== %s ====)%n" +
+                        "%nPrice: %f%n",
+                bunName, bunName, bunPrice * 2
+        );
+
+        String actualReceipt = burger.getReceipt();
+        assertEquals(expectedReceipt, actualReceipt);
     }
 }
